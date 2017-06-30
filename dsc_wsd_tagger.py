@@ -1,12 +1,23 @@
 #!/usr/bin/env python
 
 ############################################################
-# Author:   Ruben Izquierdo Bevia ruben.izquierdobevia@vu.nl       
-# Version:  1.2
+# Author:   Ruben Izquierdo Bevia ruben.izquierdobevia@vu.nl (RIB)
+# Modif:    Paul Huygen paul.huygen@huygen.nl (PH)
+# Version:  1.3
 # Date:     20 Jan 2014
+# Changes:
+#           1.2 (RIB) --> included hack to convert things like op_slaan into opslaan
+#           20170629 (PH) Assumes treetagger in PATH
+#           20170629 (PH) Assumes svnutil in PYTHONPATH
+
 #############################################################
-
-
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from builtins import (
+         bytes, dict, int, list, object, range, str,
+         ascii, chr, hex, input, next, oct, open,
+         pow, round, super,
+filter, map, zip)
 
 import sys
 import codecs
@@ -17,29 +28,25 @@ from collections import defaultdict
 from operator import itemgetter
 from xml.etree.ElementTree import ElementTree, Element
 
-## Code for seting the paths for the local installation of 
 
 #Code for importing svmutil
 this_folder = os.path.dirname(__file__)
-libsvmfolder = os.path.join(this_folder,'lib','libsvm','python')
-sys.path.append(libsvmfolder)
+# libsvmfolder = os.path.join(this_folder,'lib','libsvm','python')
+# sys.path.append(libsvmfolder)
 from svmutil import *
 ###########################
 
 
-__version = '1.2'
-__modified = '20jan2015'
-TREETAGGER='/home/ruben/TreeTagger'
+__version = '1.3'
+__modified = '29jun2017'
+# TREETAGGER='/home/ruben/TreeTagger'
+TREETAGGER = os.environ['TREETAGGER_HOME']
 POS_NOUN = 'n'
 POS_VERB = 'v'
 POS_ADJ = 'a'
 MODELS_FOLDER = os.path.join(this_folder,'models')
 NAF_INPUT = 'naf'
 
-######## CHANGES ###########
-# 1.2 --> included hack to convert things like op_slaan into opslaan
-#
-##########################
 
 
 def loadDictionary(filename):
@@ -49,10 +56,12 @@ def loadDictionary(filename):
       fields = line.strip().split()
       lemma = fields[0]
       pos = fields[1]
-      num_senses = (len(fields)-2)/3
+#      num_senses = (len(fields)-2)/3
+      num_senses = (len(fields)-2) // 3
       idx = 2
       dictionary[(lemma,pos)] = []
-      for n in xrange(num_senses):
+#      for n in xrange(num_senses):
+      for n in range(num_senses):
           dictionary[(lemma,pos)].append((fields[idx],fields[idx+1], fields[idx+2]))
           idx+=3          
     fic.close()
@@ -194,7 +203,8 @@ def generate_xml_semcor(tokens,final_results):
 
 if __name__ == '__main__':
     
-    argument_parser = argparse.ArgumentParser(description='WSD system for Dutch text trained with SVM on the DutchSemCor data', version='1.0')
+#    argument_parser = argparse.ArgumentParser(description='WSD system for Dutch text trained with SVM on the DutchSemCor data', version='1.0')
+    argument_parser = argparse.ArgumentParser(description='WSD system for Dutch text trained with SVM on the DutchSemCor data')
     argument_parser.add_argument('--naf',dest='use_naf', action='store_true', help='Input is a NAF file')
     argument_parser.add_argument('-ref', dest='ref_type', default='odwnSY', choices=['corLU', 'odwnLU', 'odwnSY'], help='Type of reference to use, cornetto Lexical unit, OpenDutchWorndet LU or ODWN synset')
     
@@ -253,7 +263,8 @@ if __name__ == '__main__':
     
     ## Extracting features for each token
     features_for_tokenid = {}
-    for idx in xrange(len(tokens)):
+#    for idx in xrange(len(tokens)):
+    for idx in range(len(tokens)):
         token_id = tokens[idx][0]
         features = extract_features(idx,tokens)
         features_for_tokenid[token_id] = features
@@ -295,7 +306,8 @@ if __name__ == '__main__':
             idxForFeatures = loadIndexFeatures(featurefile)
             
             ## LOAD SVM MODEL
-            model = svm_load_model(modelfile.encode('utf-8'))            
+#            model = svm_load_model(modelfile.encode('utf-8'))            
+            model = svm_load_model(modelfile)            
             
             for token_id, token, pos, lemma, num_sentence in tokens:
                 possible_senses = senses_for_tokenid.get(token_id)

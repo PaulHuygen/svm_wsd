@@ -1,0 +1,75 @@
+#!/bin/bash
+# Set SVMLIB in hierarchy: 1) -s option; 2) SVMLIB_HOME; 3) default (SVM_HOME_DEF)
+# Set TREETAGGER_HOME in hierarchy: 1) -t option; 2) TREETAGGER_HOME; 3) default (TREETAGGER_HOME_DEF)
+# Set REF  in hierarchy: 1) -r option; 2) REF; 3) default (REF_DEF)
+thisdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd ${thisdir}
+#
+# Options:
+# "-s <loc>": loc is location of svmlib.
+# "-t <loc>": loc is location of treebank.
+# "-r <ref>": loc is location of treebank.
+#
+
+TREETAGGER_HOME_OPT=$TREETAGGER_HOME
+SVMLIB_HOME_OPT=$SVMLIB_HOME
+REF_OPT=$SVNREF
+
+function get_options () {
+    local opts=""
+    while getopts a:t:r: opt; do
+	case $opt in
+	    s) SVMLIB_HOME_OPT=$OPTARG
+               ;;
+	    t) TREETAGGER_HOME_OPT=$OPTARG
+               ;;
+	    r) REF_OPT=$OPTARG
+               ;;
+	    *) echo "Unknown option." 
+               exit 1
+               ;;
+	esac
+    done
+}
+
+
+# Check whether the treetagger module is in the PATH.
+#   and set the TREETAGGER variable accordingly.
+# Exit is we cannot find treetagger.
+function check_include_treetagger () {
+    TREETAGGER_HOME_DEF=${thisdir}/treetagger
+    export TREETAGGER_HOME=${TREETAGGER_HOME_OPT:-$TREETAGGER_HOME_DEF}
+    if
+	[ ! -e ${TREETAGGER_HOME}/cmd/tree-tagger-dutch ]
+    then
+        echo "Treetagger ${TREETAGGER_HOME}/cmd/tree-tagger-dutch not found" >&2
+	exit 1
+    fi
+}
+
+function check_include_svmutil () {
+    SVMLIB_HOME_DEF=${thisdir}/lib/libsvm
+    SVMLIB_HOME=${SVMLIB_OPT:-$SVMLIB_HOME_DEF}
+    if
+	[ ! -d ${SVMLIB_HOME} ]
+    then
+	echo "No svmlib." >&2
+	exit 1
+    fi
+    export PYTHONPATH=$SVMLIB_HOME/python:$PYTHONPATH
+}
+
+# Check output-reference
+function check_reference () {
+    REF_DEF='odwnSY'
+    export SVNREF=${REF_OPT:-$REF_DEF}
+}
+
+get_options
+check_include_treetagger
+check_include_svmutil
+check_reference
+WSDSCRIPT=dsc_wsd_tagger.py
+echo "TREETAGGER_HOME: " ${TREETAGGER_HOME} >&2
+echo "SVNREF: " ${SVNREF} >&2
+cat | python ./dsc_wsd_tagger.py --naf -ref ${SVNREF}

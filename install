@@ -1,0 +1,173 @@
+#!/bin/bash
+############################################################
+# Author:   Paul Huygen/Ruben Izquierdo Bevia ruben.izquierdobevia@vu.nl
+# Version:  2.0
+# Date:     28 jun 2017
+#############################################################
+thisdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $thisdir
+echo "This dir: " $thisdir
+
+#
+# Options:
+# "-s <loc>": loc is location of svmlib.
+# "-t <loc>": loc is location of treebank.
+#
+function get_options () {
+    local opts=""
+    while getopts a:t: opt; do
+	case $opt in
+	    s) SVMLIB_CLOPT=$OPTARG
+               ;;
+	    t) TREETAGGER_HOME_CLOPT=$OPTARG
+               ;;
+	    *) echo "Unknown option." 
+               exit 1
+               ;;
+	esac
+    done
+}
+
+#
+# Install libsvm in $SVMLIB_HOME
+# Run this function only if
+#  1) Directory $SVMLIB_HOME does not yet exist
+#  2) This script is able to generate directory $SVMLIB_HOME
+#
+function install_libsvm () {
+    local svmball="master.zip"
+    local svm_url="https://github.com/cjlin1/libsvm/archive/$svmball"
+    tempdir=`mktemp -d -t svmlib.XXXXXX`
+    cd $tempdir
+    wget --no-check-certificate ${svm_url}
+    unzip ${svmball}
+    rm ${svmball}
+    local oridir=`ls -1 | head -1`
+    mv $oridir ${SVMLIB_HOME} 
+    cd ${SVMLIB_HOME}/python
+    rm -rf \$tempdir
+    make
+    cd $thisdir
+}
+
+
+# Find out variable SVMLIB_HOME
+# Try to install svmlib there if it is not already present.
+# Fail if svmlib cannot be found or installed
+function set_up_libsvm () {
+    SVMLIB_HOME_DEF=${thisdir}/lib/libsvm
+    SVMLIB_HOME=${SVMLIB_CLOPT:-$SVMLIB_HOME_DEF}
+    if
+	[ ! -d "${SVMLIB_HOME}" ]
+    then
+	mkdir -p "${SVMLIB_HOME}"
+	if
+	    [ $? -gt 0 ]
+	then
+	    echo "Installation of libsvm impossible" >&2
+	    exit 1
+	fi
+	rmdir ${SVMLIB_HOME}
+	install_libsvm
+    fi
+}
+
+
+function change_path () {
+    filepath=$1
+    tempfil=`mktemp -t cmdfile.XXXXXX`
+    mv $filepath $tempfil
+    sed s/^BIN=
+    } 
+
+
+
+
+
+#
+# Install Treetagger in $TREETAGGER_HOME
+# Run this function only if
+#  1) Directory $TREETAGGER_HOME does not yet exist
+#  2) This script is able to generate directory $TREETAGGER_HOME
+#
+function install_treetagger () {
+    local cmdir=${TREETAGGER_HOME}/cmd
+    local oldd=`pwd`
+    local treetagger_base_url="http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data"
+
+    function make_treetagger_location_independent () {
+	local indicator=""
+
+	function get_indicator () {
+	    local probefile=`grep -l "^BIN=" ${cmdir}/* | head -n 1`
+            indicator=`cat $probefile | gawk '/^BIN=/ {match($0, /^BIN=(.*treetagger)\/bin/, arr); print arr[1]}'`
+	}
+
+	get_indicator
+	local sedcommand="s|$indicator|\${TREETAGGER_HOME}|g"
+	local tempfile=`mktemp -t mytemp.XXXXXX`
+	for file in ${cmdir}/*
+	do
+	    mv $file $tempfile
+	    cat $tempfile | sed $sedcommand >$file
+	done	   
+	rm -rf $tempfile
+    }
+	grep -l "^BIN=" cmd/* | xargs -iaap change_path aap
+
+    mkdir ${TREETAGGER_HOME}
+    cd ${TREETAGGER_HOME}
+    if [[ `uname` == 'Linux' ]]; then
+	wget ${treetagger_base_url}/tree-tagger-linux-3.2.1.tar.gz
+    elif [[ `uname` == 'Darwin' ]]; then
+	wget ${treetagger_base_url}/tree-tagger-MacOSX-3.2-intel.tar.gz
+    fi
+    wget ${treetagger_base_url}/tagger-scripts.tar.gz
+    wget ${treetagger_base_url}/install-tagger.sh
+    wget ${treetagger_base_url}/dutch-par-linux-3.2-utf8.bin.gz
+    sh ./install-tagger.sh
+    make_treetagger_location_independent
+    echo Treetagger installed correctly on ${TREETAGGER_HOME} >&2
+    cd ${oldd}
+}
+
+
+# Find out variable TREETAGGER_HOME
+# Try to install treetagger thereif it is not already present.
+# Fail if dir. $TREETAGGER_HOME cannot be found or installed
+function set_up_treetagger () {
+    TREETAGGER_HOME_DEF=${thisdir}/treetagger
+    TREETAGGER_HOME=${TREETAGGER_HOME_CLOPT:-$TREETAGGER_HOME_DEF}
+    if
+	[ ! -d "${TREETAGGER_HOME}" ]
+    then
+	mkdir "${TREETAGGER_HOME}"
+	if
+	    [ $? -gt 0 ]
+	then
+	    echo "Installation of treetagger impossible" >&2
+	    exit 1
+	fi
+	rmdir ${TREETAGGER_HOME}
+	echo "Install treetagger in ${TREETAGGER_HOME}"
+	install_treetagger
+    fi
+}
+
+# Download models
+function download_models () {
+    local modelball=models_wsd_svm_dsc.tgz
+    local model_url=http://kyoto.let.vu.nl/~izquierdo/${modelball}
+    local model_user='cltl'
+    local model_passwd='.cltl.'
+    cd $thisdir
+    wget --user=cltl --password=${model_passwd} ${model_url}
+    tar -xzf ${modelball}
+    rm $modelball
+}
+
+get_options
+set_up_libsvm
+set_up_treetagger
+download_models
+pip install KafNafParserPy
