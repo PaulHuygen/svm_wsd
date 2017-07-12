@@ -73,17 +73,6 @@ function set_up_libsvm () {
 }
 
 
-function change_path () {
-    filepath=$1
-    tempfil=`mktemp -t cmdfile.XXXXXX`
-    mv $filepath $tempfil
-    sed s/^BIN=
-    } 
-
-
-
-
-
 #
 # Install Treetagger in $TREETAGGER_HOME
 # Run this function only if
@@ -95,9 +84,12 @@ function install_treetagger () {
     local oldd=`pwd`
     local treetagger_base_url="http://www.cis.uni-muenchen.de/~schmid/tools/TreeTagger/data"
 
+    # Replace absolute paths in scripts in treetagger/cmd by relative ones
+    # (relative to TREETAGGER_HOME)
     function make_treetagger_location_independent () {
 	local indicator=""
 
+	# Assign string indicator to absolute path that must be replaced.
 	function get_indicator () {
 	    local probefile=`grep -l "^BIN=" ${cmdir}/* | head -n 1`
             indicator=`cat $probefile | gawk '/^BIN=/ {match($0, /^BIN=(.*treetagger)\/bin/, arr); print arr[1]}'`
@@ -113,7 +105,6 @@ function install_treetagger () {
 	done	   
 	rm -rf $tempfile
     }
-	grep -l "^BIN=" cmd/* | xargs -iaap change_path aap
 
     mkdir ${TREETAGGER_HOME}
     cd ${TREETAGGER_HOME}
