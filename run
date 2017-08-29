@@ -1,8 +1,20 @@
 #!/bin/bash
+modname=svm_wsd
+#
+# Find the path to this module
+#
+if
+  [ -z ${MODROOT+x} ]
+then
+  # Find out path ourselves
+  thisdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+else
+  thisdir=$MODROOT/$modname
+fi
+thisscript=${thisdir}/run
 # Set SVMLIB in hierarchy: 1) -s option; 2) SVMLIB_HOME; 3) default (SVM_HOME_DEF)
 # Set TREETAGGER_HOME in hierarchy: 1) -t option; 2) TREETAGGER_HOME; 3) default (TREETAGGER_HOME_DEF)
 # Set REF  in hierarchy: 1) -r option; 2) REF; 3) default (REF_DEF)
-thisdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd ${thisdir}
 #
 # Options:
@@ -35,7 +47,7 @@ function get_options () {
 
 # Check whether the treetagger module is in the PATH.
 #   and set the TREETAGGER variable accordingly.
-# Exit is we cannot find treetagger.
+# Exit if we cannot find treetagger.
 function check_include_treetagger () {
     TREETAGGER_HOME_DEF=${thisdir}/treetagger
     export TREETAGGER_HOME=${TREETAGGER_HOME_OPT:-$TREETAGGER_HOME_DEF}
