@@ -148,11 +148,13 @@ function set_up_treetagger () {
 # Download models
 function download_models () {
     local modelball=models_wsd_svm_dsc.tgz
-    local model_url=http://kyoto.let.vu.nl/~izquierdo/${modelball}
+#    local model_url=http://kyoto.let.vu.nl/~izquierdo/${modelball}
+    local model_url=http://kyoto.let.vu.nl/~newsreader/nlpp/${modelball}
     local model_user='cltl'
     local model_passwd='.cltl.'
     cd $thisdir
-    wget --user=cltl --password=${model_passwd} ${model_url}
+#    wget --user=cltl --password=${model_passwd} ${model_url}
+    wget ${model_url}
     tar -xzf ${modelball}
     rm $modelball
 }
